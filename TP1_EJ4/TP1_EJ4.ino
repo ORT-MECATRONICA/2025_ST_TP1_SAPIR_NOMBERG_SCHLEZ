@@ -1,0 +1,157 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+#include <DHT_U.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+#define SDA_PIN 21
+#define SCL_PIN 22
+#define DHTPIN 23
+
+#define SW1_PIN 34  // Pin para SW1
+#define SW2_PIN 35  // Pin para SW2
+#define LED_PIN 2 // Pin para el LED
+
+#define DHTTYPE DHT11
+DHT_Unified dht(DHTPIN, DHTTYPE);
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+uint32_t delayMS;
+int umbral = 25;  // Umbral inicial en grados Celsius
+int temperaturaActual = 0;
+
+enum Estado {
+  PANTALLA_1,
+  PANTALLA_2
+};
+
+Estado estadoActual = PANTALLA_1;
+
+unsigned long tiempoAnterior = 0;
+unsigned long intervalo = 500; // Intervalo para leer el sensor de temperatura (en milisegundos)
+unsigned long tiempoBotonesAnterior = 0;
+unsigned long intervaloBotones = 200; // Intervalo para debounce de botones (en milisegundos)
+
+bool botonesPresionadosUltimaVez = false;
+
+void setup() {
+  Serial.begin(9600);
+
+  dht.begin();
+  pinMode(SW1_PIN, INPUT_PULLUP);
+  pinMode(SW2_PIN, INPUT_PULLUP);
+  pinMode(LED_PIN, OUTPUT);
+  
+  sensor_t sensor;
+  dht.temperature().getSensor(&sensor);
+  delayMS = sensor.min_delay / 1000;
+
+  Wire.begin(SDA_PIN, SCL_PIN);
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;);
+  }
+}
+
+void loop() {
+  unsigned long tiempoActual = millis();
+  
+  if (tiempoActual - tiempoAnterior >= intervalo) {
+    // Se ha pasado el intervalo para la temperatura
+    temperaturaActual = obtenerTemperatura();
+    tiempoAnterior = tiempoActual;  // Actualiza el tiempo anterior
+  }
+
+  if (tiempoActual - tiempoBotonesAnterior >= intervaloBotones) {
+    // Se ha pasado el intervalo para debounce de botones
+    if (botonesPresionados()) {
+      if (digitalRead(SW1_PIN) == LOW) {
+        umbral++;  // Aumentar el umbral si se presiona SW1
+      }
+      if (digitalRead(SW2_PIN) == LOW) {
+        umbral--;  // Disminuir el umbral si se presiona SW2
+      }
+    }
+    tiempoBotonesAnterior = tiempoActual;  // Actualiza el tiempo de los botones
+  }
+
+  switch (estadoActual) {
+    case PANTALLA_1:
+      mostrarPantalla1();
+      break;
+      
+    case PANTALLA_2:
+      mostrarPantalla2();
+      break;
+  }
+
+  if (temperaturaActual > umbral) {
+    digitalWrite(LED_PIN, HIGH);  // Enciende el LED si la temperatura supera el umbral
+  } else {
+    digitalWrite(LED_PIN, LOW);   // Apaga el LED si no
+  }
+}
+
+int obtenerTemperatura() {
+  sensors_event_t event;
+  dht.temperature().getEvent(&event);
+  
+  if (isnan(event.temperature)) {
+    return 0; // Error de lectura
+  }
+  
+  return event.temperature;
+}
+
+void mostrarPantalla1() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 10);
+  
+  display.println("Temperatura Actual:");
+  display.print(temperaturaActual);
+  display.println(" C");
+  
+  display.print("Valor Umbral: ");
+  display.print(umbral);
+  display.println(" C");
+
+  display.display();
+}
+
+void mostrarPantalla2() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 10);
+  
+  display.println("Modificar Umbral:");
+  display.print("Umbral: ");
+  display.print(umbral);
+  display.println(" C");
+
+  display.println("SW1: Aumentar");
+  display.println("SW2: Disminuir");
+
+  display.display();
+}
+
+bool botonesPresionados() {
+  bool presionado = (digitalRead(SW1_PIN) == LOW || digitalRead(SW2_PIN) == LOW);
+  
+  if (presionado && !botonesPresionadosUltimaVez) {
+    botonesPresionadosUltimaVez = true;
+    return true;
+  } else if (!presionado) {
+    botonesPresionadosUltimaVez = false;
+  }
+
+  return false;
+}
