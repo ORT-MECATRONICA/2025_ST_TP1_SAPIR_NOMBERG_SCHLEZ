@@ -12,9 +12,9 @@
 #define SCL_PIN 22
 #define DHTPIN 23
 
-#define SW1_PIN 34  // Pin para SW1
-#define SW2_PIN 35  // Pin para SW2
-#define LED_PIN 2 // Pin para el LED
+#define SW1_PIN 34  
+#define SW2_PIN 35  
+#define LED_PIN 2   
 
 #define DHTTYPE DHT11
 DHT_Unified dht(DHTPIN, DHTTYPE);
@@ -33,9 +33,9 @@ enum Estado {
 Estado estadoActual = PANTALLA_1;
 
 unsigned long tiempoAnterior = 0;
-unsigned long intervalo = 500; // Intervalo para leer el sensor de temperatura (en milisegundos)
+unsigned long intervalo = 500; 
 unsigned long tiempoBotonesAnterior = 0;
-unsigned long intervaloBotones = 200; // Intervalo para debounce de botones (en milisegundos)
+unsigned long intervaloBotones = 200; 
 
 bool botonesPresionadosUltimaVez = false;
 
@@ -63,38 +63,41 @@ void loop() {
   unsigned long tiempoActual = millis();
   
   if (tiempoActual - tiempoAnterior >= intervalo) {
-    // Se ha pasado el intervalo para la temperatura
     temperaturaActual = obtenerTemperatura();
-    tiempoAnterior = tiempoActual;  // Actualiza el tiempo anterior
+    tiempoAnterior = tiempoActual;  
   }
 
   if (tiempoActual - tiempoBotonesAnterior >= intervaloBotones) {
-    // Se ha pasado el intervalo para debounce de botones
     if (botonesPresionados()) {
-      if (digitalRead(SW1_PIN) == LOW) {
-        umbral++;  // Aumentar el umbral si se presiona SW1
-      }
-      if (digitalRead(SW2_PIN) == LOW) {
-        umbral--;  // Disminuir el umbral si se presiona SW2
+      bool sw1 = digitalRead(SW1_PIN) == LOW;
+      bool sw2 = digitalRead(SW2_PIN) == LOW;
+
+      if (sw1 && sw2) {
+        
+        estadoActual = (estadoActual == PANTALLA_1) ? PANTALLA_2 : PANTALLA_1;
+      } else {
+        if (estadoActual == PANTALLA_2) {
+          if (sw1) umbral++;
+          if (sw2) umbral--;
+        }
       }
     }
-    tiempoBotonesAnterior = tiempoActual;  // Actualiza el tiempo de los botones
+    tiempoBotonesAnterior = tiempoActual;
   }
 
   switch (estadoActual) {
     case PANTALLA_1:
       mostrarPantalla1();
       break;
-      
     case PANTALLA_2:
       mostrarPantalla2();
       break;
   }
 
   if (temperaturaActual > umbral) {
-    digitalWrite(LED_PIN, HIGH);  // Enciende el LED si la temperatura supera el umbral
+    digitalWrite(LED_PIN, HIGH);
   } else {
-    digitalWrite(LED_PIN, LOW);   // Apaga el LED si no
+    digitalWrite(LED_PIN, LOW);   
   }
 }
 
@@ -103,7 +106,7 @@ int obtenerTemperatura() {
   dht.temperature().getEvent(&event);
   
   if (isnan(event.temperature)) {
-    return 0; // Error de lectura
+    return 0;
   }
   
   return event.temperature;
