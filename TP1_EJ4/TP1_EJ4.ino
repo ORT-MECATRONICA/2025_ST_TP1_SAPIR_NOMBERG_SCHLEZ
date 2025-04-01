@@ -35,9 +35,10 @@ Estado estadoActual = PANTALLA_1;
 unsigned long tiempoAnterior = 0;
 unsigned long intervalo = 500; 
 unsigned long tiempoBotonesAnterior = 0;
-unsigned long intervaloBotones = 200; 
+unsigned long intervaloBotones = 50; 
 
-bool botonesPresionadosUltimaVez = false;
+bool sw1Anterior = HIGH;
+bool sw2Anterior = HIGH;
 
 void setup() {
   Serial.begin(9600);
@@ -68,20 +69,28 @@ void loop() {
   }
 
   if (tiempoActual - tiempoBotonesAnterior >= intervaloBotones) {
-    if (botonesPresionados()) {
-      bool sw1 = digitalRead(SW1_PIN) == LOW;
-      bool sw2 = digitalRead(SW2_PIN) == LOW;
+    bool sw1 = digitalRead(SW1_PIN);
+    bool sw2 = digitalRead(SW2_PIN);
 
-      if (sw1 && sw2) {
-        
-        estadoActual = (estadoActual == PANTALLA_1) ? PANTALLA_2 : PANTALLA_1;
-      } else {
-        if (estadoActual == PANTALLA_2) {
-          if (sw1) umbral++;
-          if (sw2) umbral--;
-        }
+    // Cambio de pantalla solo si se presionan y sueltan ambos botones
+    if (sw1 == LOW && sw2 == LOW && (sw1Anterior == HIGH || sw2Anterior == HIGH)) {
+      estadoActual = (estadoActual == PANTALLA_1) ? PANTALLA_2 : PANTALLA_1;
+    }
+
+    // Aumentar/disminuir solo cuando se suelta un botón
+    if (estadoActual == PANTALLA_2) {
+      if (sw1Anterior == LOW && sw1 == HIGH) {
+        umbral++;
+      }
+      if (sw2Anterior == LOW && sw2 == HIGH) {
+        umbral--;
       }
     }
+
+    // Guardar el estado anterior
+    sw1Anterior = sw1;
+    sw2Anterior = sw2;
+
     tiempoBotonesAnterior = tiempoActual;
   }
 
@@ -118,7 +127,7 @@ void mostrarPantalla1() {
   display.setTextColor(WHITE);
   display.setCursor(0, 10);
   
-  display.println("Temperatura Actual:");
+  display.println("Temp Actual:");
   display.print(temperaturaActual);
   display.println(" C");
   
@@ -144,17 +153,4 @@ void mostrarPantalla2() {
   display.println("SW2: Disminuir");
 
   display.display();
-}
-
-bool botonesPresionados() {
-  bool presionado = (digitalRead(SW1_PIN) == LOW || digitalRead(SW2_PIN) == LOW);
-  
-  if (presionado && !botonesPresionadosUltimaVez) {
-    botonesPresionadosUltimaVez = true;
-    return true;
-  } else if (!presionado) {
-    botonesPresionadosUltimaVez = false;
-  }
-
-  return false;
 }
