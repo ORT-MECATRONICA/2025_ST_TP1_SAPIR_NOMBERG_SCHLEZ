@@ -14,7 +14,7 @@
 
 #define SW1_PIN 34  
 #define SW2_PIN 35  
-#define LED_PIN 2   
+#define LED_PIN 25   
 
 #define DHTTYPE DHT11
 DHT_Unified dht(DHTPIN, DHTTYPE);
@@ -77,7 +77,7 @@ void loop() {
       estadoActual = (estadoActual == PANTALLA_1) ? PANTALLA_2 : PANTALLA_1;
     }
 
-    // Aumentar/disminuir solo cuando se suelta un botón
+
     if (estadoActual == PANTALLA_2) {
       if (sw1Anterior == LOW && sw1 == HIGH) {
         umbral++;
