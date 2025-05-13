@@ -14,7 +14,7 @@
 
 #define SW1_PIN 34  
 #define SW2_PIN 35  
-#define LED_PIN 25   
+#define LED_PIN 25    
 
 #define DHTTYPE DHT11
 DHT_Unified dht(DHTPIN, DHTTYPE);
@@ -72,28 +72,40 @@ void loop() {
     bool sw1 = digitalRead(SW1_PIN);
     bool sw2 = digitalRead(SW2_PIN);
 
-    // Cambio de pantalla solo si se presionan y sueltan ambos botones
-    if (sw1 == LOW && sw2 == LOW && (sw1Anterior == HIGH || sw2Anterior == HIGH)) {
-      estadoActual = (estadoActual == PANTALLA_1) ? PANTALLA_2 : PANTALLA_1;
+    // Verificar si ambos botones están presionados
+    if (sw1 == LOW && sw2 == LOW) {
+      // Verificar si uno de los botones fue previamente presionado y ahora está suelto
+      if (sw1Anterior == HIGH || sw2Anterior == HIGH) {
+        // Cambiar el estado de la pantalla entre PANTALLA_1 y PANTALLA_2
+        if (estadoActual == PANTALLA_1) {
+          estadoActual = PANTALLA_2;
+        } else {
+          estadoActual = PANTALLA_1;
+        }
+      }
     }
 
-
+    // En PANTALLA_2, modificar el umbral al presionar SW1 o SW2
     if (estadoActual == PANTALLA_2) {
+      // Verificar si el botón SW1 fue presionado (se soltó de LOW a HIGH)
       if (sw1Anterior == LOW && sw1 == HIGH) {
-        umbral++;
+        umbral++;  // Aumentar el umbral
       }
+      // Verificar si el botón SW2 fue presionado (se soltó de LOW a HIGH)
       if (sw2Anterior == LOW && sw2 == HIGH) {
-        umbral--;
+        umbral--;  // Disminuir el umbral
       }
     }
 
-    // Guardar el estado anterior
+    // Guardar el estado anterior de los botones
     sw1Anterior = sw1;
     sw2Anterior = sw2;
 
+    // Actualizar el tiempo de los botones para evitar rebotes
     tiempoBotonesAnterior = tiempoActual;
   }
 
+  // Mostrar la pantalla según el estado actual
   switch (estadoActual) {
     case PANTALLA_1:
       mostrarPantalla1();
@@ -103,10 +115,11 @@ void loop() {
       break;
   }
 
+  // Controlar el LED en función de la temperatura
   if (temperaturaActual > umbral) {
-    digitalWrite(LED_PIN, HIGH);
+    digitalWrite(LED_PIN, HIGH);  // LED encendido si temperatura supera el umbral
   } else {
-    digitalWrite(LED_PIN, LOW);   
+    digitalWrite(LED_PIN, LOW);   // LED apagado si temperatura no supera el umbral
   }
 }
 
